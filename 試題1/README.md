@@ -15,3 +15,6 @@ The command above builds an image that can be deployed. To run the image in a co
 ```console
 docker run --env-file env -d --name fastapi-mongo -p 80:80 fastapi-mongo:latest
 ```
+
+## 參考網址
+* [台北市建築管理工程處-雙語詞彙](https://dba.gov.taipei/cp.aspx?n=E8A756CFF2A5C236)
