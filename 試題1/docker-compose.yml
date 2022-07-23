@@ -1,0 +1,29 @@
+version: "3"
+
+networks:
+  backend:
+
+services:
+  web:
+    build: .
+    ports:
+      - "80:8080"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    networks:
+      - backend
+
+  mongodb:
+    image: bitnami/mongodb:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - data:/bitnami/mongodb
+    networks:
+      - backend
+
+
+volumes:
+  data:
