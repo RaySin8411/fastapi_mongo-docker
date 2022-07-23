@@ -2,19 +2,29 @@
 
 A simple starter for building RESTful APIs with FastAPI and MongoDB. 
 
-## Dockerising
+## Docker-compose
 
-To build a docker image for this boilerplate, create a duplicate `.env` file but with name `env`. Next, build an image:
-
-```console
-docker build -t fastapi-mongo .
-```
-
-The command above builds an image that can be deployed. To run the image in a container:
+Init
 
 ```console
-docker run --env-file env -d --name fastapi-mongo -p 80:80 fastapi-mongo:latest
+docker-compose up -d
 ```
+
+Rebuild API
+
+```console
+docker-compose up web --build -d
+```
+
+## 爬蟲
+### Step
+1. 爬新北市路名
+
+參考網址: [全國路名資料](https://data.gov.tw/dataset/35321)
+
+2. 爬新北營照處各區設置參數id
+
+參考網址: [新北市政府-建管便民服務資訊網](https://building-management.publicwork.ntpc.gov.tw/_setData.jsp?rt=D1)
 
 ## 參考網址
 * [台北市建築管理工程處-雙語詞彙](https://dba.gov.taipei/cp.aspx?n=E8A756CFF2A5C236)
