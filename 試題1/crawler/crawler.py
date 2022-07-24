@@ -5,6 +5,7 @@ import tesserocr
 import urllib.request
 from PIL import Image
 from bs4 import BeautifulSoup
+from urllib.parse import urlencode
 
 
 # 獲取圖片img物件
@@ -20,7 +21,7 @@ def to_gray_image(img):
 
 
 # 將灰度圖片二值化
-def to_bin_image(img_gray, threshold=165):
+def to_bin_image(img_gray, threshold=150):
     pixdata = img_gray.load()
     width, height = img_gray.size
     for y in range(height):
@@ -54,16 +55,16 @@ def check_code():
 
     ocr_code = read_verification_code("code.png")
     try:
-        code = int(''.join(filter(str.isdigit, ocr_code)))
+        code = ''.join(filter(str.isdigit, ocr_code))
     except:
-        code = 1234
+        code = '1234'
 
     url = "https://building-management.publicwork.ntpc.gov.tw/CheckCode"
     resp = requests.post(
         url, cookies=cookies,
         headers={"Content-Type": "application/x-www-form-urlencoded"}, data={"code": code}
     )
-    return resp, code
+    return {"resp": resp, "code": code, "cookies": cookies}
 
 
 if __name__ == '__main__':
@@ -93,27 +94,55 @@ if __name__ == '__main__':
         item['road_list'] = road_list
         data.append(item)
 
-    # 檢查驗證碼
-    failure_list = []
+    final_data = []
     for item in data:
-        print(item['D1V'])
+        print(item['D1V'] + f": road {len(item['road_list'])}")
+        item.setdefault('road_item_count', item['road_list'])
+        cnt = 0
+        road_dict = {}
         for road in item['road_list']:
-            print(road)
-            params = {"rt": "BM", "PagePT": 0, "A2": 3, "D1V": item['D1V'], "D1": item['D1'], "D3": road}
-            resp, code = check_code()
-            params.setdefault('Z1', code)
-            if resp.status_code == 200:
-                if resp.json() == True:
-                    # 查詢建照
-                    url = "https://building-management.publicwork.ntpc.gov.tw/bm_list.jsp"
-                    cookies = resp.cookies.get_dict()
-                    resp = requests.post(
-                        url, cookies=cookies,
-                        headers={"Content-Type": "application/x-www-form-urlencoded"}, data=params
-                    )
-                    html = BeautifulSoup(resp.text, 'html.parser')
-                    print(html.find_all('tbody'))
-                else:
-                    print('驗證失敗')
 
-                    failure_list.append({"D1V": item['D1V'], "D1": item['D1'], "D3": road})
+            params = dict()
+            info = check_code()
+            resp = info['resp']
+            while resp.status_code != 200 or resp.json() != True:
+                info = check_code()
+                resp = info['resp']
+            code = info['code']
+            cookies = info['cookies']
+            params.setdefault('rt', "BM")
+            params.setdefault('PagePT', 0)
+            params.setdefault('A2', 3)
+            params.setdefault('D1V', item['D1V'])
+            params.setdefault('D1', int(item['D1']))
+            params.setdefault('D3', road)
+            params.setdefault('Z1', code)
+
+            # 查詢建照
+            url = "https://building-management.publicwork.ntpc.gov.tw/bm_list.jsp"
+            try:
+                params_big5 = urlencode(params, encoding='big5')
+            except:
+                params_big5 = params
+            headers = {
+                "User-Agent":
+                    "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, "
+                    "like Gecko) Chrome/103.0.0.0 Mobile Safari/537.36",
+                "Content-Type": "application/x-www-form-urlencoded"}
+            session = requests.Session()
+            resp = session.post(
+                url, cookies=cookies, headers=headers, data=params_big5
+            )
+            html = BeautifulSoup(resp.text, 'html.parser')
+            road_count = int(html.find('span').get_text())
+            print(road + f':{road_count}')
+            road_dict.setdefault(item['D1V'], road_count)
+            cnt += road_count
+
+        item.setdefault('road_dict', road_dict)
+        del item['road_list']
+        item.setdefault('road_total_count', cnt)
+        final_data.append(item)
+        print('*' * 20)
+
+    print(final_data)
