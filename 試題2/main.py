@@ -1,3 +1,4 @@
+import time
 import csv
 import requests
 import shutil
@@ -68,6 +69,7 @@ def check_code():
 
 
 if __name__ == '__main__':
+    start = time.time()
     # 爬新北市路名
     url = "https://data.moi.gov.tw/MoiOD/System/DownloadFile.aspx?DATA=99E4BBC4-11E2-410C-B749-C604267DA1EE"
     with requests.Session() as s:
@@ -96,53 +98,49 @@ if __name__ == '__main__':
 
     final_data = []
     for item in data:
-        print(item['D1V'] + f": road {len(item['road_list'])}")
         item.setdefault('road_item_count', item['road_list'])
         cnt = 0
         road_dict = {}
-        for road in item['road_list']:
 
-            params = dict()
+        params = dict()
+        info = check_code()
+        resp = info['resp']
+        while resp.status_code != 200 or resp.json() != True:
             info = check_code()
             resp = info['resp']
-            while resp.status_code != 200 or resp.json() != True:
-                info = check_code()
-                resp = info['resp']
-            code = info['code']
-            cookies = info['cookies']
-            params.setdefault('rt', "BM")
-            params.setdefault('PagePT', 0)
-            params.setdefault('A2', 3)
-            params.setdefault('D1V', item['D1V'])
-            params.setdefault('D1', int(item['D1']))
-            params.setdefault('D3', road)
-            params.setdefault('Z1', code)
+        code = info['code']
+        cookies = info['cookies']
+        params.setdefault('rt', "BM")
+        params.setdefault('PagePT', 0)
+        params.setdefault('A2', 3)
+        params.setdefault('D1V', item['D1V'])
+        params.setdefault('D1', int(item['D1']))
+        params.setdefault('Z1', code)
 
-            # 查詢建照
-            url = "https://building-management.publicwork.ntpc.gov.tw/bm_list.jsp"
-            try:
-                params_big5 = urlencode(params, encoding='big5')
-            except:
-                params_big5 = params
-            headers = {
-                "User-Agent":
-                    "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, "
-                    "like Gecko) Chrome/103.0.0.0 Mobile Safari/537.36",
-                "Content-Type": "application/x-www-form-urlencoded"}
-            session = requests.Session()
-            resp = session.post(
-                url, cookies=cookies, headers=headers, data=params_big5
-            )
-            html = BeautifulSoup(resp.text, 'html.parser')
-            road_count = int(html.find('span').get_text())
-            print(road + f':{road_count}')
-            road_dict.setdefault(item['D1V'], road_count)
-            cnt += road_count
-
-        item.setdefault('road_dict', road_dict)
-        del item['road_list']
-        item.setdefault('road_total_count', cnt)
+        # 查詢建照
+        url = "https://building-management.publicwork.ntpc.gov.tw/bm_list.jsp"
+        try:
+            params_big5 = urlencode(params, encoding='big5')
+        except:
+            params_big5 = params
+        headers = {
+            "User-Agent":
+                "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, "
+                "like Gecko) Chrome/103.0.0.0 Mobile Safari/537.36",
+            "Content-Type": "application/x-www-form-urlencoded"}
+        session = requests.Session()
+        resp = session.post(
+            url, cookies=cookies, headers=headers, data=params_big5
+        )
+        html = BeautifulSoup(resp.text, 'html.parser')
+        cnt = int(html.find('span').get_text())
+        item.setdefault('total_count', cnt)
         final_data.append(item)
-        print('*' * 20)
+        print(item['D1V'] + f": road {len(item['road_list'])}, total_count: {cnt} ")
 
-    print(final_data)
+    final_data = sorted(final_data, key=lambda d: d['total_count'])
+    end = time.time()
+    print(f'花費時間:{end - start}')
+    print(f"{final_data[-1]['D1V']}使照數量最多, 達 {final_data[-1]['total_count']} 個")
+    print(f"{final_data[0]['D1V']}使照數量最少, 達 {final_data[0]['total_count']} 個")
+
