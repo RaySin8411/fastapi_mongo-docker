@@ -3,7 +3,7 @@ import time
 import csv
 import requests
 import tesserocr
-from aiohttp import ClientSession
+from aiohttp import ClientSession, TCPConnector
 from PIL import Image
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode
@@ -50,6 +50,40 @@ async def fetch(road, item, session, index):
         html = BeautifulSoup(html_body, 'html.parser')
         road_count = int(html.find('span').get_text())
         print(road + f':{road_count}')
+        if road_count != 0:
+            pages = road_count // 7 + 1
+            asyncio.create_task(create_buildings(html, item, road, session))
+            if pages > 1:
+                del params['rt']
+                for para_1 in range(2, pages + 1):
+                    params.update({'PagePT': para_1})
+                    try:
+                        params_big5 = urlencode(params, encoding='big5')
+                    except:
+                        params_big5 = params
+                    async with session.post(url, cookies=cookies, headers=headers, data=params_big5) as response:
+                        html_body = await response.text()
+                        html = BeautifulSoup(html_body, 'html.parser')
+                        asyncio.create_task(create_buildings(html, item, road, session))
+                time.sleep(0.1)
+            time.sleep(0.1)
+        time.sleep(0.1)
+        print(f'{item["D1V"]} {road} finished')
+
+
+
+async def create_buildings(html, item, road, session):
+    for row in html.find_all('tbody')[0].find_all('tr'):
+        part_data = [td.text for td in row.find_all('td')]
+        post_dict = {
+            "city_area": item['D1V'], "area_id": item['D1'], "road": road, "use_license": part_data[0],
+            "construction_license": part_data[1], "applicant": part_data[2], "designer": part_data[3],
+            "address": part_data[4], "date": part_data[5]
+        }
+        async with session.post(
+                url="http://127.0.0.1:80/building/",
+                headers={"Content-Type": "application/json"}, json=post_dict) as resp:
+            print(await resp.text())
 
 
 def integrate_new_city_data():
