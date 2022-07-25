@@ -11,7 +11,8 @@ from urllib.parse import urlencode
 
 # 定義協程(coroutine)
 async def main(item):
-    async with ClientSession() as session:
+    connector = TCPConnector(limit_per_host=50)
+    async with ClientSession(connector=connector, ) as session:
         length = len(item['road_list'])
         tasks = [asyncio.create_task(fetch(road, item, session, index)) for road, index in
                  zip(item['road_list'], range(length))]
@@ -49,27 +50,26 @@ async def fetch(road, item, session, index):
         html_body = await response.text()
         html = BeautifulSoup(html_body, 'html.parser')
         road_count = int(html.find('span').get_text())
-        print(road + f':{road_count}')
-        if road_count != 0:
-            pages = road_count // 7 + 1
-            asyncio.create_task(create_buildings(html, item, road, session))
-            if pages > 1:
-                del params['rt']
-                for para_1 in range(2, pages + 1):
-                    params.update({'PagePT': para_1})
-                    try:
-                        params_big5 = urlencode(params, encoding='big5')
-                    except:
-                        params_big5 = params
-                    async with session.post(url, cookies=cookies, headers=headers, data=params_big5) as response:
-                        html_body = await response.text()
-                        html = BeautifulSoup(html_body, 'html.parser')
-                        asyncio.create_task(create_buildings(html, item, road, session))
-                time.sleep(0.1)
-            time.sleep(0.1)
+    print(road + f':{road_count}')
+    if road_count != 0:
+        pages = road_count // 7 + 1
+        asyncio.create_task(create_buildings(html, item, road, session))
         time.sleep(0.1)
-        print(f'{item["D1V"]} {road} finished')
-
+        if pages > 1:
+            del params['rt']
+            for para_1 in range(2, pages + 1):
+                params.update({'PagePT': para_1})
+                try:
+                    params_big5 = urlencode(params, encoding='big5')
+                except:
+                    params_big5 = params
+                async with session.post(url, cookies=cookies, headers=headers, data=params_big5) as response:
+                    html_body = await response.text()
+                    html = BeautifulSoup(html_body, 'html.parser')
+                    asyncio.create_task(create_buildings(html, item, road, session))
+                time.sleep(0.1)
+    print(f'{item["D1V"]} {road} finished')
+    time.sleep(0.3)
 
 
 async def create_buildings(html, item, road, session):
@@ -98,10 +98,11 @@ def integrate_new_city_data():
 
     # 爬新北營照處各區設置參數id
     url = "https://building-management.publicwork.ntpc.gov.tw/_setData.jsp?rt=D1"
-    resp = requests.get(url)
-    html = BeautifulSoup(resp.text, 'html.parser')
-    body = html.find_all('div')
-    area = [{"D1": test.get('onclick')[12:15], "D1V": test.get('onclick')[18:24]} for test in body]
+    with requests.Session() as s:
+        resp = s.get(url)
+        html = BeautifulSoup(resp.text, 'html.parser')
+        body = html.find_all('div')
+        area = [{"D1": test.get('onclick')[12:15], "D1V": test.get('onclick')[18:24]} for test in body]
 
     # 整合上方資料
     data = []
