@@ -7,7 +7,7 @@ from models.building import Building
 building_collection = Building
 
 
-async def add_buildings(new_building: Building) -> Building:
+async def add_building(new_building: Building) -> Building:
     building = await new_building.create()
     return building
 

@@ -135,8 +135,26 @@ if __name__ == '__main__':
             )
             html = BeautifulSoup(resp.text, 'html.parser')
             road_count = int(html.find('span').get_text())
+            pages = road_count // 7 + 1
             print(road + f':{road_count}')
             road_dict.setdefault(item['D1V'], road_count)
+            for row in html.find_all('tbody')[0].find_all('tr'):
+                print([td.text for td in row.find_all('td')])
+            if pages > 1:
+                del params['rt']
+                for para_1 in range(2, pages + 1):
+                    params.update({'PagePT': para_1})
+                    try:
+                        params_big5 = urlencode(params, encoding='big5')
+                    except:
+                        params_big5 = params
+                    session = requests.Session()
+                    resp = session.post(
+                        url, cookies=cookies, headers=headers, data=params_big5
+                    )
+                    html = BeautifulSoup(resp.text, 'html.parser')
+                    for row in html.find_all('tbody')[0].find_all('tr'):
+                        print([td.text for td in row.find_all('td')])
             cnt += road_count
 
         item.setdefault('road_dict', road_dict)
