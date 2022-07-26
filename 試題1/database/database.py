@@ -13,7 +13,7 @@ async def add_building(new_building: Building) -> Building:
 
 
 async def retrieve_buildings() -> List[Building]:
-    buildings = await building_collection.all().to_list()
+    buildings = await building_collection.all(limit=100).to_list()
     return buildings
 
 
