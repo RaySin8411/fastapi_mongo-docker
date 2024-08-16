@@ -28,7 +28,7 @@ requests==2.32.0
 six==1.16.0
 sniffio==1.2.0
 soupsieve==2.3.2.post1
-starlette==0.19.1
+starlette==0.35.0
 toml==0.10.2
 typing_extensions==4.3.0
 unicorn==2.0.0
