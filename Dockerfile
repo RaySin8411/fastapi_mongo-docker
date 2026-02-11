@@ -2,7 +2,7 @@ FROM python:3.9
 WORKDIR /app
 RUN apt-get update \
   && apt-get -y install tesseract-ocr \
-  && apt-get install -y python3 python3-distutils python3-pip \
+  && apt-get install -y python3 python3-setuptools python3-pip \
   && cd /usr/local/bin \
   && pip3 --no-cache-dir install --upgrade pip \
   && rm -rf /var/lib/apt/lists/*
